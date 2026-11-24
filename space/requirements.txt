@@ -1,0 +1,6 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch
+transformers==4.57.6
+peft==0.22.0
+accelerate==1.16.0
+gradio==5.50.0
