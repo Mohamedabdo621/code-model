@@ -6,7 +6,7 @@ Loads the base model (4-bit) + your LoRA adapter from the HF Hub and answers
 one coding prompt from the command line.
 
 Examples:
-    python inference.py --adapter darklink56/qwen-coder-1.5b-lora \
+    python inference.py --adapter darklink56/qwen-coder-1.5b-lora-out \
         --prompt "Write a Python function that checks if a string is a palindrome"
 
     # Interactive-ish: no --prompt → uses a built-in demo prompt
@@ -23,7 +23,7 @@ from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 DEFAULT_BASE_MODEL = "Qwen/Qwen2.5-Coder-1.5B-Instruct"
-DEFAULT_ADAPTER = "darklink56/qwen-coder-1.5b-lora"
+DEFAULT_ADAPTER = "darklink56/qwen-coder-1.5b-lora-out"
 DEMO_PROMPT = "Write a Python function that returns the nth Fibonacci number using memoization."
 
 

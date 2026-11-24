@@ -134,6 +134,7 @@ def main():
 
     sft_config = SFTConfig(
         output_dir=args.output_dir,
+        hub_model_id=hf_repo,
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.batch,
         gradient_accumulation_steps=args.grad_accum,
@@ -169,7 +170,7 @@ def main():
             print("⚠️  No HF_TOKEN found in environment — skipping push. "
                   "Set HF_TOKEN (Write token) and re-run, or push manually with huggingface_hub.")
         else:
-            trainer.push_to_hub(hf_repo)
+            trainer.push_to_hub()
             tokenizer.push_to_hub(hf_repo)
             print(f"✅ Adapter pushed to: https://huggingface.co/{hf_repo}")
 
