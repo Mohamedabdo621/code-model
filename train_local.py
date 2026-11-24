@@ -124,8 +124,7 @@ def main():
         fp16=True,
         gradient_checkpointing=True,
         optim="paged_adamw_8bit",
-        max_seq_length=args.max_seq_len,
-        dataset_text_field="text",
+        max_length=args.max_seq_len,  # TRL الجديدة: max_length بدل max_seq_length
         packing=False,
         report_to=[],
     )
