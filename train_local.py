@@ -7,7 +7,7 @@ standalone script for local machines with a GPU, Kaggle, or any server.
 
 Examples:
     # Default run (3000 samples of Magicoder, push adapter to HF at the end)
-    HF_TOKEN=hf_xxx python train_local.py --hf-username YOUR_HF_USERNAME
+    HF_TOKEN=hf_xxx python train_local.py --hf-username darklink56
 
     # Train on your OWN examples instead (see data/README.md)
     python train_local.py --custom-data data/sample_custom.jsonl --no-push
@@ -44,7 +44,7 @@ def parse_args():
     p.add_argument("--grad-accum", type=int, default=8)
     p.add_argument("--max-seq-len", type=int, default=1024)
     p.add_argument("--output-dir", default="qwen-coder-1.5b-lora-out")
-    p.add_argument("--hf-username", default="YOUR_HF_USERNAME",
+    p.add_argument("--hf-username", default="darklink56",
                    help="Your Hugging Face username (used to build the output repo id)")
     p.add_argument("--hf-repo", default=None,
                    help="Full HF repo id for the adapter (overrides --hf-username)")

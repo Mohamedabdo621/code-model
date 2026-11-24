@@ -28,7 +28,7 @@ ise-uiuc/Magicoder-OSS-Instruct-75K ──► notebooks/train_code_model_colab.i
                               LoRA adapter (small files)
                                        │  push_to_hub
                                        ▼
-Hugging Face (your account)     YOUR_HF_USERNAME/qwen-coder-1.5b-lora
+Hugging Face (your account)     darklink56/qwen-coder-1.5b-lora
                                        │
                                        ▼
                               inference.py = base model + adapter
@@ -65,10 +65,10 @@ https://colab.research.google.com/github/Mohamedabdo621/code-model/blob/main/not
 في خلية الـ **Config** (رقم 4 في النوتبوك) غيّر:
 
 ```python
-HF_USERNAME = "YOUR_HF_USERNAME"   # ← اسم مستخدمك على Hugging Face
+HF_USERNAME = "darklink56"   # ← اسم مستخدمك على Hugging Face
 ```
 
-النتيجة هتترفع على: `YOUR_HF_USERNAME/qwen-coder-1.5b-lora`
+النتيجة هتترفع على: `darklink56/qwen-coder-1.5b-lora`
 
 ### 6) شغّل الكل
 `Runtime → Run all` وخلي التبويب مفتوح.
@@ -80,19 +80,19 @@ Colab). النموذج هيتحسّن في اتباع التعليمات وأس�
 قفزة سحرية من أول 3000 مثال — الجودة بتيجي مع تكبير الداتا بعد كده.
 
 ### 7) النتيجة وتجربتها
-- الأدابتور بيظهر على: `https://huggingface.co/YOUR_HF_USERNAME/qwen-coder-1.5b-lora`
+- الأدابتور بيظهر على: `https://huggingface.co/darklink56/qwen-coder-1.5b-lora`
 - جرّبه محلياً (محتاج GPU لسرعة معقولة):
 
 ```bash
 pip install -r requirements.txt
-python inference.py --adapter YOUR_HF_USERNAME/qwen-coder-1.5b-lora \
+python inference.py --adapter darklink56/qwen-coder-1.5b-lora \
     --prompt "Write a Python function that checks if a string is a palindrome"
 ```
 
 - أو درّب من غير نوتبوك (Kaggle / جهازك):
 
 ```bash
-HF_TOKEN=hf_xxx python train_local.py --hf-username YOUR_HF_USERNAME
+HF_TOKEN=hf_xxx python train_local.py --hf-username darklink56
 ```
 
 ## التكلفة والحدود — Costs = 0
