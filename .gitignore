@@ -1,0 +1,15 @@
+# Training output / checkpoints
+qwen-coder-1.5b-lora-out/
+checkpoint-*/
+outputs/
+*.zip
+
+# Secrets — never commit tokens
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/

@@ -1,0 +1,9 @@
+# Same dependency set as the Colab notebook (versions known to work together)
+transformers>=4.46,<5
+trl>=0.12,<1
+peft>=0.13,<1
+accelerate>=1.0,<2
+bitsandbytes>=0.44
+datasets>=3.0,<4
+huggingface_hub
+torch
