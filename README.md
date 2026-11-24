@@ -4,6 +4,12 @@
 بنعلّم `Qwen/Qwen2.5-Coder-1.5B-Instruct` تعليم إضافي (LoRA/QLoRA) على
 Google Colab المجاني، والنتيجة بتترفع على Hugging Face باسمك.
 
+> **v2 — النسخة النظيفة (إعادة بناء كاملة):** إصدارات المكتبات دلوقتي
+> **مثبتة بالظبط** ومتحقق من توافقها من ملفات المكتبات نفسها:
+> `trl==0.29.1`, `transformers==4.57.6`, `peft==0.22.0`,
+> `accelerate==1.16.0`, `bitsandbytes==0.50.2`, `datasets==4.8.5`.
+> لو النوتبوك القديمة مفتوحة، اقفلها وافتح دي من جديد.
+
 ## صراحة الأول — إحنا بنعمل إيه بالظبط؟
 
 - إحنا **مش** بندرّب نموذج من الصفر. النموذج الأساسي (Qwen-Coder) اتدرب
@@ -61,11 +67,11 @@ https://colab.research.google.com/github/Mohamedabdo621/code-model/blob/main/not
 - اعمل سر جديد: الاسم `HF_TOKEN` والقيمة التوكن بتاعك
 - فعّل **Notebook access** للنوتبوك دي
 
-### 5) عدّل اسم المستخدم
-في خلية الـ **Config** (رقم 4 في النوتبوك) غيّر:
+### 5) اسم المستخدم — جاهز، مفيش تعديل
+خلية الـ **Config** (رقم 4 في النوتبوك) مثبّتة بالفعل على:
 
 ```python
-HF_USERNAME = "darklink56"   # ← اسم مستخدمك على Hugging Face
+HF_USERNAME = "darklink56"   # اسم مستخدمك على Hugging Face
 ```
 
 النتيجة هتترفع على: `darklink56/qwen-coder-1.5b-lora`
@@ -111,6 +117,15 @@ HF_TOKEN=hf_xxx python train_local.py --hf-username darklink56
 
 ## Troubleshooting — مشاكل معروفة
 
+- **غلطتين v1 اللي اتصلحوا في v2 (مش هيظهروا تاني):**
+  (1) `SFTConfig ... unexpected keyword argument 'max-seq-length'` —
+  TRL الجديدة شالت الاسم ده؛ v2 بتستخدم `max_length`.
+  (2) `NotImplementedError ... not implemented for 'BFloat16'` —
+  TRL 0.29.1 بتحوّل أوزان أدابتور QLoRA لـ bf16 بنفسها، ومع `fp16=True`
+  الـ GradScaler بيقع على T4؛ v2 قافلة `fp16/bf16` في إعدادات التدريب
+  ومثبتة تحميل النموذج على `float16`، فالخطأ مستحيل يحصل.
+- **Versions mismatch في خلية التثبيت:** اعمل Restart للجلسة وشغّل من
+  الأول — الإصدارات المثبتة بالظبط (شوف ملحوظة v2 فوق) هي المرجع.
 - **Out of Memory:** قلّل `PER_DEVICE_BATCH` لـ 1، أو `MAX_SEQ_LEN`
   لـ 768، أو `SAMPLE_SIZE` — بالتفصيل في آخر خلية في النوتبوك.
 - **الجلسة فصلت قبل الرفع:** الأدابتور بيضيع؛ عشان كده أول تشغيلة

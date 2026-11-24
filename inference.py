@@ -57,7 +57,8 @@ def main():
             bnb_4bit_use_double_quant=True,
         )
         model = AutoModelForCausalLM.from_pretrained(
-            args.base_model, quantization_config=bnb_config, device_map="auto",
+            args.base_model, quantization_config=bnb_config,
+            torch_dtype=torch.float16, device_map="auto",
         )
 
     model = PeftModel.from_pretrained(model, args.adapter)

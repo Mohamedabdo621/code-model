@@ -1,20 +1,34 @@
 #!/usr/bin/env python3
 """
-train_local.py — نفس تدريب النوتبوك، بس كاسكربت مستقل.
+train_local.py — نفس تدريب النوتبوك، بس كاسكربت مستقل (الإصدار النظيف v2).
 
 Same LoRA/QLoRA fine-tune as notebooks/train_code_model_colab.ipynb, as a
 standalone script for local machines with a GPU, Kaggle, or any server.
+Dependencies are EXACT pins (see requirements.txt): trl==0.29.1,
+transformers==4.57.6, peft==0.22.0, accelerate==1.16.0,
+bitsandbytes==0.50.2, datasets==4.8.5 — verified against the pinned
+wheels' source code.
+
+v2 fixes vs v1:
+  * SFTConfig uses max_length (TRL removed max-seq-length).
+  * fp16=False / bf16=False in SFTConfig: TRL 0.29.1 casts QLoRA adapter
+    weights to bf16 itself; with fp16=True the GradScaler crashes on T4
+    with NotImplementedError "... not implemented for 'BFloat16'".
+    Compute still runs in float16 inside bitsandbytes.
+  * Model loaded with torch_dtype=torch.float16, tokenizer.pad_token set,
+    model.enable_input_require_grads() + use_reentrant=False for
+    gradient checkpointing + LoRA.
 
 Examples:
     # Default run (3000 samples of Magicoder, push adapter to HF at the end)
-    HF_TOKEN=hf_xxx python train_local.py --hf-username darklink56
+    HF_TOKEN=<your-write-token> python train_local.py
 
     # Train on your OWN examples instead (see data/README.md)
     python train_local.py --custom-data data/sample_custom.jsonl --no-push
 
 Requires a CUDA GPU (a free Kaggle/Colab-class T4 with 16GB is enough).
-The HF token is read from the HF_TOKEN environment variable or ~/.cache —
-never hardcode it here.
+The HF token is read from the HF_TOKEN environment variable or the local
+HF cache — never hardcode it here.
 """
 
 import argparse
@@ -53,7 +67,11 @@ def parse_args():
 
 
 def build_dataset(args, tokenizer):
-    """Return a dataset with a single 'text' column rendered via the chat template."""
+    """Return a dataset with a single 'text' column rendered via the chat template.
+
+    We do NOT pre-tokenize: SFTTrainer (TRL 0.29.1) tokenizes the "text"
+    field itself — that is its documented, source-verified behavior.
+    """
     if args.custom_data:
         ds = load_dataset("json", data_files=args.custom_data, split="train")
         if args.sample_size and len(ds) > args.sample_size:
@@ -85,6 +103,7 @@ def main():
     hf_repo = args.hf_repo or f"{args.hf_username}/qwen-coder-1.5b-lora"
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model)
+    tokenizer.pad_token = "<|endoftext|>"  # Qwen has no separate pad token
     train_ds = build_dataset(args, tokenizer)
     print(f"Training examples: {len(train_ds)}")
 
@@ -101,6 +120,7 @@ def main():
         device_map="auto",
     )
     model.config.use_cache = False
+    model.enable_input_require_grads()  # required with gradient checkpointing + LoRA
 
     lora_config = LoraConfig(
         r=16,
@@ -122,10 +142,12 @@ def main():
         warmup_ratio=0.03,
         logging_steps=10,
         save_strategy="no",
-        fp16=True,
+        fp16=False,  # must stay False: TRL casts QLoRA adapters to bf16;
+        bf16=False,  # fp16 GradScaler + bf16 grads = BFloat16 crash on T4
         gradient_checkpointing=True,
+        gradient_checkpointing_kwargs={"use_reentrant": False},
         optim="paged_adamw_8bit",
-        max_length=args.max_seq_len,  # TRL الجديدة: max_length بدل max_seq_length
+        max_length=args.max_seq_len,  # TRL >= 0.29: max_length (max-seq-length removed)
         packing=False,
         report_to=[],
     )
