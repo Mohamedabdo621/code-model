@@ -11,6 +11,8 @@ pinned: false
 
 # Code Model API — ربط النموذج بأي تطبيق
 
+> ⚠️ تحديث (2026-11-24): Hugging Face بقت بتشترط خطة PRO مدفوعة لأي Space بيشتغل على compute (Gradio/Docker) — المجاني بقى Static بس، وده ميشغّلش نموذج. فالملفات دي محفوظة كمرجع/للمستقبل، والطريقة المجانية الشغالة فعلياً دلوقتي هي نوتبوك `notebooks/serve_api_colab.ipynb` (Colab + رابط gradio.live) — نفس الـ API بنفس الاسم `generate`.
+
 الملفات اللي في الفولدر ده (`app.py` + `requirements.txt` + الـ README ده)
 بتتعمل بيها **Hugging Face Space** مجانية بتشغّل نموذج Alex المدرّب
 (`darklink56/qwen-coder-1.5b-lora-out` فوق `Qwen/Qwen2.5-Coder-1.5B-Instruct`)
