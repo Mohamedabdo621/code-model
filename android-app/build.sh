@@ -46,6 +46,8 @@ echo "3/7 d8: تحويل لـ DEX"
 echo "4/7 حزم الـ DEX والمكتبات الأصلية داخل الـ APK"
 for ABI in $ABIS; do
     find "$APP_DIR/jni/build-$ABI" -maxdepth 2 -name '*.so' -exec cp {} "$BUILD/pkg/lib/$ABI/" \;
+    # libggml-cpu بيعتمد على libomp (OpenMP) — لازم يتحزم مع التطبيق
+    cp "$NDK/toolchains/llvm/prebuilt/linux-x86_64/lib/clang/18/lib/linux/aarch64/libomp.so" "$BUILD/pkg/lib/$ABI/"
     echo "$ABI libs:"; ls "$BUILD/pkg/lib/$ABI/"
 done
 cp "$BUILD/dex/classes.dex" "$BUILD/pkg/"
