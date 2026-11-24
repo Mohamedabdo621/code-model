@@ -2,7 +2,6 @@ package com.alex.nexacode;
 
 import android.animation.ObjectAnimator;
 import android.app.Activity;
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -16,6 +15,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -26,16 +26,11 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * NEXA CODE 2100 — تطبيق مصمم الأكواد: بيكلم نموذج Alex المدرّب،
- * يسأله عن أكواد، ويبني له مشاريع ويب كاملة على الجهاز مع معاينة فورية.
- * الواجهة كلها مرسومة برمجياً: زجاج نيون + خلفية سائلة متحركة.
+ * NEXA CODE 2100 — الإصدار 2: النموذج شغال جوه التطبيق نفسه (llama.cpp)
+ * من غير سيرفر ولا رابط ولا إنترنت بعد تنزيل النموذج مرة واحدة.
+ * تبويبات: اسأل (شات) · ابنِ (بناء مشاريع) · مشاريعي (معاينة) · النموذج (إدارة).
  */
 public class MainActivity extends Activity {
-
-    // ------------------------------------------------------------ الثوابت
-    private static final String PREFS = "nexa_prefs";
-    private static final String KEY_URL = "api_url";
-    private static final String DEFAULT_URL = "https://5e5982073a5ebbb186.gradio.live";
 
     private static final int C_TEXT = Color.rgb(234, 246, 255);
     private static final int C_MUTED = Color.rgb(159, 179, 200);
@@ -44,16 +39,18 @@ public class MainActivity extends Activity {
     private static final int C_MAGENTA = Color.rgb(255, 62, 165);
     private static final int C_GLASS = Color.argb(30, 255, 255, 255);
     private static final int C_GLASS_STROKE = Color.argb(90, 0, 229, 255);
+    private static final int C_GREEN = Color.rgb(0, 255, 170);
 
-    // ------------------------------------------------------------ الحالة
     private FrameLayout screenHost;
     private LinearLayout chatMessages, projectList, buildLog;
     private ScrollView chatScroll, buildLogScroll;
-    private EditText chatInput, buildInput, urlInput;
-    private View chatScreen, buildScreen, projectsScreen, settingsScreen;
+    private EditText chatInput, buildInput;
+    private View chatScreen, buildScreen, projectsScreen, modelScreen;
     private TextView[] navItems;
+    private TextView headerDot, modelStatus, downloadPct;
+    private ProgressBar downloadBar;
+    private Button downloadBtn, loadBtn, deleteBtn, previewBtn;
     private File lastBuiltDir;
-    private Button previewBtn;
 
     // ------------------------------------------------------------ أدوات واجهة
     private int dp(float v) {
@@ -105,10 +102,6 @@ public class MainActivity extends Activity {
         return p;
     }
 
-    private String apiUrl() {
-        return getSharedPreferences(PREFS, MODE_PRIVATE).getString(KEY_URL, DEFAULT_URL).trim();
-    }
-
     private File projectsRoot() {
         File f = new File(getExternalFilesDir(null), "projects");
         f.mkdirs();
@@ -136,15 +129,30 @@ public class MainActivity extends Activity {
         chatScreen = buildChatScreen();
         buildScreen = buildBuildScreen();
         projectsScreen = buildProjectsScreen();
-        settingsScreen = buildSettingsScreen();
+        modelScreen = buildModelScreen();
         screenHost.addView(chatScreen);
         screenHost.addView(buildScreen);
         screenHost.addView(projectsScreen);
-        screenHost.addView(settingsScreen);
+        screenHost.addView(modelScreen);
         showScreen(0);
 
         setContentView(root);
-        addBubble("أهلاً بيك في 2100 ✦ أنا نموذج الكود بتاعك. اسألني عن أي كود، أو روح لتبويب «ابنِ» واوصف مشروع وأنا أبنيهولك ملفات جاهزة على موبايلك.", false);
+        refreshModelUi();
+        if (LocalModel.isDownloaded(this)) {
+            addBubble("أهلاً بيك في 2100 ✦ النموذج بيتحمّل في الذاكرة دلوقتي، ثواني ويبقى جاهز يرد عليك على طول — من غير نت ومن غير روابط.", false);
+            LocalModel.initAsync(this, new LocalModel.Callback() {
+                @Override public void onSuccess(String r) {
+                    refreshModelUi();
+                    addBubble("✅ النموذج جاهز! اسألني عن أي كود، أو روح «ابنِ» واوصف مشروع أبنيهولك.", false);
+                }
+                @Override public void onError(String m) {
+                    refreshModelUi();
+                    addBubble("❌ " + m, false);
+                }
+            });
+        } else {
+            addBubble("أهلاً بيك في 2100 ✦ أنا نموذج الكود بتاعك وشغال جوه التطبيق نفسه. فاضل خطوة واحدة أول مرة بس: نزّل ملف النموذج (حوالي 950MB) من تبويب «🧠 النموذج»، وبعدها هشتغل على طول من غير نت.", false);
+        }
     }
 
     private View buildHeader() {
@@ -153,8 +161,7 @@ public class MainActivity extends Activity {
         h.setGravity(Gravity.CENTER_VERTICAL);
         h.setPadding(dp(18), dp(16), dp(18), dp(8));
 
-        TextView logo = text("✦", 30, C_CYAN, true);
-        h.addView(logo);
+        h.addView(text("✦", 30, C_CYAN, true));
 
         LinearLayout titles = new LinearLayout(this);
         titles.setOrientation(LinearLayout.VERTICAL);
@@ -162,17 +169,17 @@ public class MainActivity extends Activity {
         TextView name = text("NEXA CODE", 21, C_TEXT, true);
         name.setLetterSpacing(0.18f);
         titles.addView(name);
-        titles.addView(text("مصمم الأكواد الذكي · إصدار 2100", 12, C_MUTED, false));
+        titles.addView(text("النموذج جوه التطبيق · إصدار 2100", 12, C_MUTED, false));
         h.addView(titles, new LinearLayout.LayoutParams(0, -2, 1f));
 
-        TextView dot = text("●", 14, Color.rgb(0, 255, 170), false);
-        h.addView(dot);
+        headerDot = text("●", 14, C_MAGENTA, false);
+        h.addView(headerDot);
         return h;
     }
 
     private View buildNav() {
         String[][] items = {
-                {"💬", "اسأل"}, {"🛠️", "ابنِ"}, {"📁", "مشاريعي"}, {"⚙️", "الرابط"}};
+                {"💬", "اسأل"}, {"🛠️", "ابنِ"}, {"📁", "مشاريعي"}, {"🧠", "النموذج"}};
         LinearLayout nav = new LinearLayout(this);
         nav.setOrientation(LinearLayout.HORIZONTAL);
         nav.setBackground(glass(0, Color.argb(46, 10, 10, 34), 0));
@@ -191,13 +198,21 @@ public class MainActivity extends Activity {
     }
 
     private void showScreen(int idx) {
-        View[] screens = {chatScreen, buildScreen, projectsScreen, settingsScreen};
+        View[] screens = {chatScreen, buildScreen, projectsScreen, modelScreen};
         for (int i = 0; i < screens.length; i++) {
             screens[i].setVisibility(i == idx ? View.VISIBLE : View.GONE);
             navItems[i].setTextColor(i == idx ? C_CYAN : C_MUTED);
             navItems[i].setBackground(i == idx ? glass(14, C_GLASS, C_GLASS_STROKE) : null);
         }
         if (idx == 2) refreshProjects();
+        if (idx == 3) refreshModelUi();
+    }
+
+    private boolean requireReady() {
+        if (LocalModel.isReady()) return true;
+        Toast.makeText(this, "النموذج مش جاهز — افتح تبويب «النموذج»", Toast.LENGTH_LONG).show();
+        showScreen(3);
+        return false;
     }
 
     // ------------------------------------------------------------ شاشة الشات
@@ -246,7 +261,6 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(-2, -2);
         p.setMargins(dp(6), dp(5), dp(6), dp(5));
         p.gravity = user ? Gravity.END : Gravity.START;
-        p.width = -2;
         chatMessages.addView(b, p);
         chatScroll.post(() -> chatScroll.fullScroll(View.FOCUS_DOWN));
         b.setAlpha(0f);
@@ -257,25 +271,23 @@ public class MainActivity extends Activity {
     private void sendChat() {
         String prompt = chatInput.getText().toString().trim();
         if (prompt.isEmpty()) return;
+        if (!requireReady()) return;
         chatInput.setText("");
         addBubble(prompt, true);
-        TextView typing = addBubble("⚡ النموذج بيصمم الكود...", false);
+        TextView typing = addBubble("⚡ النموذج بيصمم الكود... (على الموبايل بياخد وقته)", false);
         ObjectAnimator pulse = ObjectAnimator.ofFloat(typing, "alpha", 0.35f, 1f);
         pulse.setDuration(650);
         pulse.setRepeatCount(ObjectAnimator.INFINITE);
         pulse.setRepeatMode(ObjectAnimator.REVERSE);
         pulse.start();
-        ApiClient.ask(apiUrl(), prompt, 400, new ApiClient.Callback() {
-            @Override
-            public void onSuccess(String result) {
+        LocalModel.ask(prompt, 400, new LocalModel.Callback() {
+            @Override public void onSuccess(String result) {
                 pulse.cancel();
                 typing.setAlpha(1f);
-                typing.setText(result);
+                typing.setText(result.isEmpty() ? "(رد فاضي — جرب صياغة تانية)" : result);
                 chatScroll.post(() -> chatScroll.fullScroll(View.FOCUS_DOWN));
             }
-
-            @Override
-            public void onError(String message) {
+            @Override public void onError(String message) {
                 pulse.cancel();
                 typing.setAlpha(1f);
                 typing.setText("❌ " + message);
@@ -291,7 +303,7 @@ public class MainActivity extends Activity {
         col.setPadding(dp(14), dp(10), dp(14), dp(12));
 
         col.addView(text("🛠️ ابنِ مشروع كامل", 19, C_TEXT, true));
-        TextView sub = text("اوصف اللي عايزه والنموذج هيخطط الملفات ويبنيها على جهازك: HTML + CSS + JavaScript وأي لغات تانية المشروع محتاجها.", 13, C_MUTED, false);
+        TextView sub = text("اوصف اللي عايزه والنموذج هيخطط الملفات ويبنيها على جهازك: HTML + CSS + JavaScript. البناء على الموبايل أبطأ من السيرفر — كل ملف ممكن ياخد دقيقة أو اتنين.", 13, C_MUTED, false);
         sub.setPadding(0, dp(4), 0, dp(10));
         col.addView(sub);
 
@@ -343,6 +355,7 @@ public class MainActivity extends Activity {
             Toast.makeText(this, "اوصف المشروع الأول", Toast.LENGTH_SHORT).show();
             return;
         }
+        if (!requireReady()) return;
         buildLog.removeAllViews();
         String slug = desc.replaceAll("[^a-zA-Z0-9]+", "-").replaceAll("^-+|-+$", "");
         if (slug.length() > 30) slug = slug.substring(0, 30);
@@ -352,19 +365,16 @@ public class MainActivity extends Activity {
         while (dir.exists()) dir = new File(projectsRoot(), slug + "-" + (n++));
         final File outDir = dir;
         logLine("🎯 المشروع: " + desc);
-        ApiClient.buildProject(apiUrl(), desc, outDir,
+        LocalModel.buildProject(desc, outDir,
                 line -> logLine(line),
-                new ApiClient.Callback() {
-                    @Override
-                    public void onSuccess(String path) {
+                new LocalModel.Callback() {
+                    @Override public void onSuccess(String path) {
                         lastBuiltDir = new File(path);
                         logLine("✅ اتبنى المشروع في: " + lastBuiltDir.getName());
                         previewBtn.setVisibility(View.VISIBLE);
                         Toast.makeText(MainActivity.this, "المشروع جاهز 🎉", Toast.LENGTH_LONG).show();
                     }
-
-                    @Override
-                    public void onError(String message) {
+                    @Override public void onError(String message) {
                         logLine("❌ " + message);
                     }
                 });
@@ -451,52 +461,133 @@ public class MainActivity extends Activity {
         topBar.setGravity(Gravity.CENTER_VERTICAL);
         topBar.setBackground(glass(0, Color.argb(200, 8, 8, 26), 0));
         topBar.setPadding(dp(14), dp(10), dp(10), dp(10));
-        TextView title = text("👁️ " + projectDir.getName(), 15, C_TEXT, true);
-        topBar.addView(title, new LinearLayout.LayoutParams(0, -2, 1f));
+        topBar.addView(text("👁️ " + projectDir.getName(), 15, C_TEXT, true),
+                new LinearLayout.LayoutParams(0, -2, 1f));
         TextView close = text("✕ إغلاق", 15, C_CYAN, true);
         close.setPadding(dp(10), dp(4), dp(10), dp(4));
         close.setOnClickListener(v -> ((ViewGroup) overlay.getParent()).removeView(overlay));
         topBar.addView(close);
-        FrameLayout.LayoutParams tp = new FrameLayout.LayoutParams(-1, -2);
-        overlay.addView(topBar, tp);
+        overlay.addView(topBar, new FrameLayout.LayoutParams(-1, -2));
 
         ((ViewGroup) getWindow().getDecorView().findViewById(android.R.id.content)).addView(overlay);
     }
 
-    // ------------------------------------------------------------ شاشة الرابط
-    private View buildSettingsScreen() {
+    // ------------------------------------------------------------ شاشة النموذج
+    private View buildModelScreen() {
         LinearLayout col = new LinearLayout(this);
         col.setOrientation(LinearLayout.VERTICAL);
         col.setPadding(dp(14), dp(10), dp(14), dp(12));
 
-        col.addView(text("⚙️ رابط النموذج (API)", 19, C_TEXT, true));
-        TextView hint = text("الرابط ده بييجي من نوتبوك التشغيل في Colab (gradio.live). لو قفلت الجلسة وفتحتها تاني، انسخ الرابط الجديد هنا.", 13, C_MUTED, false);
-        hint.setPadding(0, dp(4), 0, dp(10));
+        col.addView(text("🧠 النموذج المحلي", 19, C_TEXT, true));
+        TextView hint = text("النموذج بيشتغل جوه التطبيق بمحرك llama.cpp — من غير سيرفر ولا رابط. التنزيل بيحصل مرة واحدة بس (حوالي 950MB، يفضل Wi-Fi)، وبعدها كل حاجة أوفلاين.", 13, C_MUTED, false);
+        hint.setPadding(0, dp(4), 0, dp(12));
         col.addView(hint);
 
-        urlInput = new EditText(this);
-        urlInput.setText(apiUrl());
-        urlInput.setTextColor(C_TEXT);
-        urlInput.setHintTextColor(C_MUTED);
-        urlInput.setTextSize(13.5f);
-        urlInput.setTypeface(Typeface.MONOSPACE);
-        urlInput.setBackground(glass(16, C_GLASS, C_GLASS_STROKE));
-        urlInput.setPadding(dp(14), dp(12), dp(14), dp(12));
-        urlInput.setSingleLine(false);
-        urlInput.setMaxLines(3);
-        col.addView(urlInput, lp(-1, -2, 2));
+        modelStatus = text("", 15, C_TEXT, true);
+        modelStatus.setBackground(glass(16, C_GLASS, C_GLASS_STROKE));
+        modelStatus.setPadding(dp(14), dp(12), dp(14), dp(12));
+        col.addView(modelStatus, lp(-1, -2, 2));
 
-        Button save = neonButton("💾 احفظ الرابط");
-        save.setOnClickListener(v -> {
-            getSharedPreferences(PREFS, MODE_PRIVATE).edit()
-                    .putString(KEY_URL, urlInput.getText().toString().trim()).apply();
-            Toast.makeText(this, "اتحفظ ✓", Toast.LENGTH_SHORT).show();
+        downloadBar = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        downloadBar.setMax(100);
+        downloadBar.setVisibility(View.GONE);
+        col.addView(downloadBar, lp(-1, -2, 4));
+
+        downloadPct = text("", 13, C_MUTED, false);
+        downloadPct.setVisibility(View.GONE);
+        col.addView(downloadPct);
+
+        downloadBtn = neonButton("⬇️ نزّل النموذج (مرة واحدة)");
+        downloadBtn.setOnClickListener(v -> startDownload());
+        col.addView(downloadBtn, lp(-1, -2, 4));
+
+        loadBtn = neonButton("⚡ حمّل النموذج في الذاكرة");
+        loadBtn.setOnClickListener(v -> {
+            modelStatus.setText("⏳ بيتحمّل...");
+            LocalModel.initAsync(this, new LocalModel.Callback() {
+                @Override public void onSuccess(String r) { refreshModelUi(); }
+                @Override public void onError(String m) {
+                    refreshModelUi();
+                    Toast.makeText(MainActivity.this, m, Toast.LENGTH_LONG).show();
+                }
+            });
         });
-        col.addView(save, lp(-1, -2, 4));
+        col.addView(loadBtn, lp(-1, -2, 2));
 
-        TextView about = text("NEXA CODE 2100 ✦ نموذج Qwen2.5-Coder-1.5B مدرّب بـ LoRA خصيصاً لـ Alex — darklink56/qwen-coder-1.5b-lora-out", 12.5f, C_MUTED, false);
-        about.setPadding(dp(4), dp(18), dp(4), 0);
+        deleteBtn = neonButton("🗑 احذف ملف النموذج");
+        deleteBtn.setOnClickListener(v -> {
+            LocalModel.deleteModel(this);
+            Toast.makeText(this, "اتحذف — هتحتاج تنزّله تاني قبل الاستخدام", Toast.LENGTH_LONG).show();
+            refreshModelUi();
+        });
+        col.addView(deleteBtn, lp(-1, -2, 2));
+
+        TextView about = text("Qwen2.5-Coder-1.5B + LoRA بتاع Alex (darklink56) — مضغوط GGUF Q4_K_M وبيشتغل على معالج الموبايل. الردود أبطأ من سيرفر GPU بس دايمة ومجانية وعلى طول.", 12.5f, C_MUTED, false);
+        about.setPadding(dp(4), dp(16), dp(4), 0);
         col.addView(about);
         return col;
+    }
+
+    private void startDownload() {
+        downloadBtn.setEnabled(false);
+        downloadBar.setVisibility(View.VISIBLE);
+        downloadPct.setVisibility(View.VISIBLE);
+        downloadBar.setProgress(0);
+        downloadPct.setText("بيبدأ التنزيل...");
+        LocalModel.download(this,
+                (pct, doneMb, totalMb) -> {
+                    downloadBar.setProgress(pct);
+                    downloadPct.setText(pct + "% — " + doneMb + " / " + totalMb + " MB");
+                },
+                new LocalModel.Callback() {
+                    @Override public void onSuccess(String r) {
+                        downloadBar.setVisibility(View.GONE);
+                        downloadPct.setText("✅ النزل كامل — بيتحمّل في الذاكرة...");
+                        LocalModel.initAsync(MainActivity.this, new LocalModel.Callback() {
+                            @Override public void onSuccess(String r2) {
+                                downloadPct.setVisibility(View.GONE);
+                                downloadBtn.setEnabled(true);
+                                refreshModelUi();
+                                Toast.makeText(MainActivity.this, "النموذج جاهز 🎉", Toast.LENGTH_LONG).show();
+                            }
+                            @Override public void onError(String m) {
+                                downloadBtn.setEnabled(true);
+                                refreshModelUi();
+                                Toast.makeText(MainActivity.this, m, Toast.LENGTH_LONG).show();
+                            }
+                        });
+                    }
+                    @Override public void onError(String m) {
+                        downloadBar.setVisibility(View.GONE);
+                        downloadPct.setVisibility(View.GONE);
+                        downloadBtn.setEnabled(true);
+                        Toast.makeText(MainActivity.this, m, Toast.LENGTH_LONG).show();
+                        refreshModelUi();
+                    }
+                });
+    }
+
+    private void refreshModelUi() {
+        if (modelStatus == null) return;
+        boolean downloaded = LocalModel.isDownloaded(this);
+        boolean readyNow = LocalModel.isReady();
+        if (headerDot != null) headerDot.setTextColor(readyNow ? C_GREEN : C_MAGENTA);
+        if (readyNow) {
+            File f = LocalModel.modelFile(this);
+            modelStatus.setText("✅ النموذج جاهز وبيشتغل محلياً (" + (f.length() / (1024 * 1024)) + " MB)");
+            downloadBtn.setVisibility(View.GONE);
+            loadBtn.setVisibility(View.GONE);
+            deleteBtn.setVisibility(View.VISIBLE);
+        } else if (downloaded) {
+            modelStatus.setText("📦 النموذج موجود على الجهاز بس لسه متحملش في الذاكرة");
+            downloadBtn.setVisibility(View.GONE);
+            loadBtn.setVisibility(View.VISIBLE);
+            deleteBtn.setVisibility(View.VISIBLE);
+        } else {
+            modelStatus.setText("⬇️ النموذج لسه منزلش — نزّله مرة واحدة ويشتغل على طول");
+            downloadBtn.setVisibility(View.VISIBLE);
+            loadBtn.setVisibility(View.GONE);
+            deleteBtn.setVisibility(View.GONE);
+        }
     }
 }
