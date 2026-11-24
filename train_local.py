@@ -54,9 +54,9 @@ def parse_args():
     p.add_argument("--sample-size", type=int, default=3000)
     p.add_argument("--epochs", type=float, default=1.0)
     p.add_argument("--lr", type=float, default=2e-4)
-    p.add_argument("--batch", type=int, default=2)
-    p.add_argument("--grad-accum", type=int, default=8)
-    p.add_argument("--max-seq-len", type=int, default=1024)
+    p.add_argument("--batch", type=int, default=1)
+    p.add_argument("--grad-accum", type=int, default=16)
+    p.add_argument("--max-seq-len", type=int, default=768)
     p.add_argument("--output-dir", default="qwen-coder-1.5b-lora-out")
     p.add_argument("--hf-username", default="darklink56",
                    help="Your Hugging Face username (used to build the output repo id)")
