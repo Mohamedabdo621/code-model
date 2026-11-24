@@ -49,7 +49,7 @@ demo = gr.Interface(
     inputs=[
         gr.Textbox(label="Prompt — اكتب مهمة كود", lines=3,
                    placeholder="Write a Python function that..."),
-        gr.Slider(32, 512, value=200, step=16, label="Max new tokens"),
+        gr.Slider(32, 1024, value=200, step=16, label="Max new tokens"),
     ],
     outputs=gr.Textbox(label="Answer — إجابة النموذج", lines=10),
     title="darklink56 Code Model",
