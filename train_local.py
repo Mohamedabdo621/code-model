@@ -97,6 +97,7 @@ def main():
     model = AutoModelForCausalLM.from_pretrained(
         args.base_model,
         quantization_config=bnb_config,
+        torch_dtype=torch.float16,
         device_map="auto",
     )
     model.config.use_cache = False
